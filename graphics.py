@@ -1,4 +1,3 @@
-# graphics.py
 """Simple object oriented graphics library  
 
 The library is designed to make it very easy for novice programmers to
@@ -160,7 +159,11 @@ __version__ = "5.0"
 #     Added ability to set text atttributes.
 #     Added Entry boxes.
 
-import time, os, sys
+import time
+import os
+import sys
+import random
+from colorsys import hsv_to_rgb
 
 try:  # import as appropriate for 2.x vs. 3.x
    import tkinter as tk
@@ -212,8 +215,14 @@ class GraphWin(tk.Canvas):
         assert type(title) == type(""), "Title must be a string"
         master = tk.Toplevel(_root)
         master.protocol("WM_DELETE_WINDOW", self.close)
-        tk.Canvas.__init__(self, master, width=width, height=height,
-                           highlightthickness=0, bd=0)
+        tk.Canvas.__init__(
+            self,
+            master,
+            width=width,
+            height=height,
+            highlightthickness=0,
+            bd=0,
+        )
         self.master.title(title)
         self.pack()
         master.resizable(0,0)
@@ -429,13 +438,15 @@ class Transform:
 
 # Default values for various item configuration options. Only a subset of
 #   keys may be present in the configuration dictionary for a given item
-DEFAULT_CONFIG = {"fill":"",
-      "outline":"black",
-      "width":"1",
-      "arrow":"none",
-      "text":"",
-      "justify":"center",
-                  "font": ("helvetica", 12, "normal")}
+DEFAULT_CONFIG = {
+    "fill":"",
+    "outline":"black",
+    "width":"1",
+    "arrow":"none",
+    "text":"",
+    "justify":"center",
+    "font": ("helvetica", 12, "normal"),
+}
 
 class GraphicsObject:
 
@@ -564,7 +575,7 @@ class Point(GraphicsObject):
     def _move(self, dx, dy):
         self.x = self.x + dx
         self.y = self.y + dy
-        
+
     def clone(self):
         other = Point(self.x,self.y)
         other.config = self.config.copy()
@@ -581,12 +592,26 @@ class _BBox(GraphicsObject):
         GraphicsObject.__init__(self, options)
         self.p1 = p1.clone()
         self.p2 = p2.clone()
+        assert self.p1.x <= self.p2.x
+        assert self.p1.y <= self.p2.y
 
     def _move(self, dx, dy):
         self.p1.x = self.p1.x + dx
         self.p1.y = self.p1.y + dy
         self.p2.x = self.p2.x + dx
         self.p2.y = self.p2.y  + dy
+
+    def get_height(self):
+        return self.p2.y - self.p1.y
+
+    def get_width(self):
+        return self.p2.x - self.p1.x
+
+    def set_pos(self, new_x, new_y):
+       self.move(
+          new_x - (self.p1.x + self.get_width() / 2),
+          new_y - (self.p1.y + self.get_height() / 2),
+       )
                 
     def getP1(self): return self.p1.clone()
 
@@ -642,9 +667,9 @@ class Oval(_BBox):
     
 class Circle(Oval):
     
-    def __init__(self, center, radius):
-        p1 = Point(center.x-radius, center.y-radius)
-        p2 = Point(center.x+radius, center.y+radius)
+    def __init__(self, center_x, center_y, radius):
+        p1 = Point(center_x-radius, center_y-radius)
+        p2 = Point(center_x+radius, center_y+radius)
         Oval.__init__(self, p1, p2)
         self.radius = radius
 
@@ -960,6 +985,15 @@ def color_rgb(r,g,b):
     """r,g,b are intensities of red, green, and blue in range(256)
     Returns color specifier string for the resulting color"""
     return "#%02x%02x%02x" % (r,g,b)
+
+def rand_color():
+    h = random.uniform(0, 1)
+    s = random.uniform(0.4, 1)
+    r,g,b = hsv_to_rgb(h, s, 1)
+    r = int(r * 255)
+    g = int(g * 255)
+    b = int(b * 255)
+    return color_rgb(r, g, b)
 
 def test():
     win = GraphWin()
